@@ -7,6 +7,7 @@
   - [3. Graceful Shutdown System Design](#3-graceful-shutdown-system-design)
     - [3.1. Graceful Termination Sequence](#31-graceful-termination-sequence)
     - [3.2. Core Principles for Application Implementation](#32-core-principles-for-application-implementation)
+  - [Summary](#summary)
 
 This document explains the Kubernetes Pod lifecycle using a Mermaid sequence diagram and clarifies the core system design principles required for implementing a **Graceful Shutdown**.
 
@@ -112,3 +113,16 @@ The application must be designed with the knowledge of the **Grace Period** in m
    - **Crucial**: The correct definition of a Graceful Shutdown in Kubernetes is **waiting for completion within a time limit (the Grace Period), not waiting indefinitely for all connections to cease**. If the period is exceeded, the Kubelet will force termination.
 
 This design ensures the application maintains data integrity while terminating safely, without compromising overall system availability.
+
+## Summary
+
+1. Kube Delete Request
+   1. A user or controller initiates the Pod deletion (e.g., kubectl delete).
+2. Removal from Service Routing
+   1. The Pod's IP is immediately removed from the Service Endpoints list by the Endpoint Controller.
+3. SIGTERM Sent by Kubelet
+   1. The Kubelet sends the SIGTERM signal to the container's main process and starts the Grace Period countdown (default 30 seconds).
+4. Application Executes Shutdown Logic
+   1. The application captures SIGTERM, stops accepting new connections, and begins completing existing in-flight requests.
+5. Forced Termination (SIGKILL)
+   1. If the process is not finished (exited) within the 30-second Grace Period, the Kubelet sends a SIGKILL signal, forcibly terminating the process.
